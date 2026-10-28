@@ -6,6 +6,7 @@ This is a location-based web application that helps cyclists find bike-share sta
 
 ## Status
 **Currently In Development** - The project skeleton has been set up: Django, PostGis and pgAdmin running in Docker containers on an isolated network.
+Skeleton and spatial models are done.
 
 ## Planned Features
 
@@ -28,12 +29,12 @@ This is a location-based web application that helps cyclists find bike-share sta
 - Deployment: Docker, Docker Compose, pgAdmin 4
 
 ## Spatial Data Model
-| Table          | Geometry   | Description                                |
-|----------------|------------|--------------------------------------------|
-| `BikeStation`  | Point      | Bike-share station locations and capacity  |
-| `HazardReport` | Point      | User-submitted hazards (type, description) |
-| `CycleLane`    | LineString | Cycle network from open data               |
-| `Area`         | Polygon    | Local area / electoral boundaries          |
+| Table          | Geometry    | Description                                |
+|----------------|-------------|--------------------------------------------|
+| `BikeStation`  | Point       | Bike-share station locations and capacity  |
+| `HazardReport` | Point       | User-submitted hazards (type, description) |
+| `CycleLane`    | LineString  | Cycle network from open data               |
+| `Area`         | MultiPolygon| Local area / electoral boundaries          |
 
 ## Setup commands
 - git clone <url>
