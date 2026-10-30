@@ -11,8 +11,8 @@ from .filters import BikeStationFilter, CycleLaneFilter, HazardReportFilter
 from .models import Area, BikeStation, CycleLane, HazardReport
 from .permissions import IsReporterOrReadOnly
 from .serializers import (
-    AreaHazardCountSerializer,
     AreaSerializer,
+    AreaStatsSerializer,
     BikeStationDistanceSerializer,
     BikeStationSerializer,
     CycleLaneSerializer,
@@ -133,16 +133,23 @@ class AreaViewSet(viewsets.ReadOnlyModelViewSet):
     bbox_filter_field = "geometry"
     bbox_filter_include_overlapping = True
 
+    # Hazard count and cycle lane length for every area
+    def areas_with_stats(self):
+        return self.filter_queryset(self.get_queryset()).with_hazard_counts().with_lane_lengths()
+
     # /api/areas/hazard_counts/
     # Every area with the number of hazards inside it, most hazards first
     @action(detail=False, methods=["get"])
     def hazard_counts(self, request):
-        areas = (
-            self.filter_queryset(self.get_queryset())
-            .with_hazard_counts()
-            .order_by("-hazard_count", "name")
-        )
-        return Response(AreaHazardCountSerializer(areas, many=True).data)
+        areas = self.areas_with_stats().order_by("-hazard_count", "name")
+        return Response(AreaStatsSerializer(areas, many=True).data)
+
+    # /api/areas/lane_lengths/
+    # Every area with the length of cycle lane inside it, most lanes first
+    @action(detail=False, methods=["get"])
+    def lane_lengths(self, request):
+        areas = self.areas_with_stats().order_by("-lane_length", "name")
+        return Response(AreaStatsSerializer(areas, many=True).data)
 
 
 # The map page. ensure_csrf_cookie gives the browser the token map.js needs

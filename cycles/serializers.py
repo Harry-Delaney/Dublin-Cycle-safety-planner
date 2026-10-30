@@ -75,10 +75,14 @@ class AreaSerializer(GeoFeatureModelSerializer):
         fields = ["id", "name", "code"]
 
 
-# Area plus the number of hazards inside it (used by "hazard_counts")
-class AreaHazardCountSerializer(AreaSerializer):
+# Area plus its hazard count and length of cycle lane in km (used by "hazard_counts" and "lane_lengths")
+class AreaStatsSerializer(AreaSerializer):
 
     hazard_count = serializers.IntegerField(read_only=True)
+    lane_length_km = serializers.SerializerMethodField()
 
     class Meta(AreaSerializer.Meta):
-        fields = AreaSerializer.Meta.fields + ["hazard_count"]
+        fields = AreaSerializer.Meta.fields + ["hazard_count", "lane_length_km"]
+
+    def get_lane_length_km(self, obj):
+        return round(obj.lane_length / 1000, 2)

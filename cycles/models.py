@@ -1,9 +1,12 @@
 
 from django.conf import settings
 from django.contrib.gis.db import models
-from django.contrib.gis.db.models.functions import Distance, GeometryDistance
+from django.contrib.gis.db.models.functions import Distance, GeometryDistance, Intersection, Length
 from django.contrib.gis.measure import D
-from django.db.models import Exists, F, Func, IntegerField, OuterRef, Subquery
+from django.db.models import (
+    Exists, ExpressionWrapper, F, FloatField, Func, IntegerField, OuterRef, Subquery,
+)
+from django.db.models.functions import Coalesce
 
 
 # Spatial queries for each model [Week 5, Django docs]
@@ -50,6 +53,19 @@ class AreaQuerySet(models.QuerySet):
             .values("count")
         )
         return self.annotate(hazard_count=Subquery(hazards_inside, output_field=IntegerField()))
+
+    # Length of cycle lane inside each area, in metres.
+    # Each lane is cut at the area boundary and only the part inside is measured.
+    def with_lane_lengths(self):
+        area_geometry = ExpressionWrapper(OuterRef("geometry"), output_field=models.GeometryField(srid=4326))
+        lanes_inside = (
+            CycleLane.objects.filter(geometry__intersects=OuterRef("geometry"))
+            .order_by()
+            .annotate(total=Func(Length(Intersection("geometry", area_geometry)),
+                                 function="SUM", output_field=FloatField()))
+            .values("total")
+        )
+        return self.annotate(lane_length=Coalesce(Subquery(lanes_inside, output_field=FloatField()), 0.0))
 
 
 class BikeStation(models.Model):

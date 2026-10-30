@@ -363,7 +363,8 @@ info.onAdd = function () {
 
 info.update = function (props) {
     this._div.innerHTML = '<h4>Hazards per area</h4>' + (props
-        ? `<b>${escapeHtml(props.name)}</b><br>${props.hazard_count} hazard${props.hazard_count === 1 ? '' : 's'} reported`
+        ? `<b>${escapeHtml(props.name)}</b><br>${props.hazard_count} hazard${props.hazard_count === 1 ? '' : 's'} reported` +
+          `<br>${props.lane_length_km} km of cycle lane`
         : 'Hover over an area');
 };
 

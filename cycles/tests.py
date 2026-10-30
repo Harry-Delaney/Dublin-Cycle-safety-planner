@@ -169,6 +169,19 @@ class AreaAPITests(APITestCase):
         self.assertEqual(counts, {"Busy": 3, "Quiet": 0})
         self.assertEqual(response.data["features"][0]["properties"]["name"], "Busy")
 
+    # Only the part of a lane inside an area is counted: a lane crossing the whole
+    # quiet area (0.01° wide, about 665 m) counts 665 m there and nothing in the busy area
+    def test_lane_lengths(self):
+        y = LAT + 0.005
+        CycleLane.objects.create(name="Crossing", geometry=LineString(
+            (LNG + 0.015, y), (LNG + 0.035, y), srid=4326))
+        response = self.client.get("/api/areas/lane_lengths/")
+        lengths = {f["properties"]["name"]: f["properties"]["lane_length_km"]
+                   for f in response.data["features"]}
+        self.assertAlmostEqual(lengths["Quiet"], 0.665, delta=0.01)
+        self.assertEqual(lengths["Busy"], 0)
+        self.assertEqual(response.data["features"][0]["properties"]["name"], "Quiet")
+
 
 # The map page and login page
 class MapPageTests(APITestCase):
