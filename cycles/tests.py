@@ -1,5 +1,11 @@
+import json
+import tempfile
+from io import StringIO
+from pathlib import Path
+
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import LineString, MultiPolygon, Point, Polygon
+from django.core.management import CommandError, call_command
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -188,3 +194,90 @@ class MapPageTests(APITestCase):
         response = self.client.get("/")
         self.assertContains(response, 'id="report-hazard"')
         self.assertContains(response, '"username": "carol"')
+
+
+# Data loader tests, using small sample files
+class LoadDataCommandTests(APITestCase):
+
+    # Temporary folder for the sample files
+    def setUp(self):
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmpdir.cleanup)
+
+    def write_geojson(self, name, features):
+        path = Path(self.tmpdir.name) / name
+        path.write_text(json.dumps({"type": "FeatureCollection", "features": features}))
+        return str(path)
+
+    # Loads one small square area
+    def load_area(self):
+        x, y = LNG, LAT
+        ring = [[x, y], [x + 0.01, y], [x + 0.01, y + 0.01], [x, y + 0.01], [x, y]]
+        path = self.write_geojson("areas.geojson", [{
+            "type": "Feature",
+            "geometry": {"type": "Polygon", "coordinates": [ring]},
+            "properties": {"Pllng_D": "Test Division", "Lcl_E_A": "Test LEA"},
+        }])
+        call_command("load_areas", path=path, stdout=StringIO())
+
+    # Area is saved with the right fields
+    def test_load_areas(self):
+        self.load_area()
+        area = Area.objects.get()
+        self.assertEqual((area.name, area.code), ("Test Division", "Test LEA"))
+        self.assertEqual(area.geometry.geom_type, "MultiPolygon")
+
+    # Lanes are cut, split, filtered and not duplicated
+    def test_load_lanes_clips_and_splits(self):
+        self.load_area()
+        y = LAT + 0.005
+        path = self.write_geojson("lanes.geojson", [
+            {"type": "Feature", "properties": {"BIKE": "BIKE_LANE", "DIR": "Forward"},
+             "geometry": {"type": "LineString", "coordinates": [[LNG - 0.01, y], [LNG + 0.02, y]]}},
+            {"type": "Feature", "properties": {"BIKE": "SEPARATE_TRAIL", "DIR": "Bi-Directional"},
+             "geometry": {"type": "MultiLineString", "coordinates": [
+                 [[LNG + 0.001, LAT + 0.001], [LNG + 0.002, LAT + 0.001]],
+                 [[LNG + 0.003, LAT + 0.002], [LNG + 0.004, LAT + 0.002]]]}},
+            {"type": "Feature", "properties": {"BIKE": "SHARED_ROAD", "DIR": "Forward"},
+             "geometry": {"type": "LineString", "coordinates": [[LNG + 1, LAT], [LNG + 1.01, LAT]]}},
+        ])
+        call_command("load_lanes", path=path, stdout=StringIO())
+
+        self.assertEqual(CycleLane.objects.count(), 3)
+        painted = CycleLane.objects.get(lane_type="painted")
+        self.assertEqual(painted.name, "Bike lane (forward)")
+        self.assertAlmostEqual(painted.geometry.extent[0], LNG, places=6)
+        self.assertAlmostEqual(painted.geometry.extent[2], LNG + 0.01, places=6)
+        self.assertEqual(CycleLane.objects.filter(lane_type="segregated").count(), 2)
+
+        call_command("load_lanes", path=path, stdout=StringIO())
+        self.assertEqual(CycleLane.objects.count(), 3)
+
+    # Lanes need areas loaded first
+    def test_load_lanes_needs_areas(self):
+        path = self.write_geojson("lanes.geojson", [])
+        with self.assertRaises(CommandError):
+            call_command("load_lanes", path=path, stdout=StringIO())
+
+    # Stations load, and re-running updates them
+    def test_load_stations(self):
+        def station(station_id, installed=True, bikes=3):
+            return {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [LNG, LAT]},
+                "properties": {
+                    "station_id": station_id, "name": "CLARENDON ROW", "capacity": 31,
+                    "num_bikes_available": bikes, "num_docks_available": 28,
+                    "is_installed": installed, "last_reported": 1793365769,
+                },
+            }
+
+        path = self.write_geojson("stations.geojson", [station("1"), station("2", installed=False)])
+        call_command("load_stations", path=path, stdout=StringIO())
+        loaded = BikeStation.objects.get()
+        self.assertEqual((loaded.station_id, loaded.name, loaded.available_bikes), ("1", "Clarendon Row", 3))
+        self.assertIsNotNone(loaded.last_updated)
+
+        path = self.write_geojson("stations.geojson", [station("1", bikes=9)])
+        call_command("load_stations", path=path, stdout=StringIO())
+        self.assertEqual(BikeStation.objects.get().available_bikes, 9)
