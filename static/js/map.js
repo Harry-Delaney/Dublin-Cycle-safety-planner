@@ -21,18 +21,20 @@ const LANE_COLORS = {
 
 const map = L.map('map').setView(DUBLIN_CENTRE, 13);
 
-const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
+// Background maps: OpenStreetMap by default, or CyclOSM, a free OpenStreetMap style that
+// highlights cycle routes. Neither needs an API key.
+const osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19
 });
 
-const cartoLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap contributors © CARTO',
-    subdomains: 'abcd',
-    maxZoom: 19
+const cyclosmLayer = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
+    attribution: '<a href="https://www.cyclosm.org">CyclOSM</a> | &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    subdomains: 'abc',
+    maxZoom: 20
 });
 
-cartoLayer.addTo(map);
+osmLayer.addTo(map);
 
 // Map layers. Areas sit under lanes, and lanes under the markers.
 // Each layer can be switched on or off from the control in the top right.
@@ -48,8 +50,8 @@ const layers = {
 
 L.control.layers(
     {
-        'CartoDB Light': cartoLayer,
-        'OpenStreetMap': osmLayer
+        'OpenStreetMap': osmLayer,
+        'CyclOSM (cycling)': cyclosmLayer
     },
     {
         'Bike stations': layers.stations,

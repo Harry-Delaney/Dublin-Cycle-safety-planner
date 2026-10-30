@@ -96,4 +96,19 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Security settings. Cookies and redirects only require HTTPS when DJANGO_HTTPS=True,
+# so the app still works over plain HTTP on localhost.
+HTTPS = os.environ.get("DJANGO_HTTPS", "False") == "True"
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")  # Nginx tells Django if HTTPS was used
+SECURE_SSL_REDIRECT = HTTPS
+SESSION_COOKIE_SECURE = HTTPS
+CSRF_COOKIE_SECURE = HTTPS
+SECURE_HSTS_SECONDS = 31536000 if HTTPS else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = HTTPS
+SESSION_COOKIE_HTTPONLY = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+# Tells other sites (e.g. the map tile servers) only which site is asking, never the full page URL
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+X_FRAME_OPTIONS = "DENY"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
