@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Map - Cycle Safe{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <!-- Control Panel -->
+        <div class="col-lg-3">
+            <div class="control-panel">
+                <h5>📊 Data Overview</h5>
+                <div class="stats-card">
+                    <h6>Bike Stations: <span id="total-stations">{{ total_stations }}</span></h6>
+                    <h6>Hazard Reports: <span id="total-hazards">{{ total_hazards }}</span></h6>
+                    <h6>Cycle Lanes: <span id="total-lanes">{{ total_lanes }}</span></h6>
+                    <h6 class="mb-0">Areas: <span id="total-areas">{{ total_areas }}</span></h6>
+                </div>
+
+                <div class="filter-section">
+                    <h6>📍 Proximity Search</h6>
+                    <div class="btn-group w-100 mb-2" role="group" aria-label="Proximity search type">
+                        <button type="button" id="nearest-search-btn" class="btn btn-outline-success btn-sm">Nearest bikes</button>
+                        <button type="button" id="radius-search-btn" class="btn btn-outline-success btn-sm">Hazards nearby</button>
+                    </div>
+                    <div id="radius-control" class="input-group input-group-sm mb-2 d-none">
+                        <span class="input-group-text">Radius</span>
+                        <input type="number" id="radius-input" class="form-control" value="500" min="50" max="5000" step="50">
+                        <span class="input-group-text">m</span>
+                    </div>
+                    <button type="button" id="locate-btn" class="btn btn-success btn-sm w-100">Use my location</button>
+                    <p id="proximity-status" class="small text-muted mt-2 mb-1">Choose a search, then click the map.</p>
+                    <div id="proximity-results" class="list-group"></div>
+                </div>
+
+                <!-- Report a hazard: button for logged-in users, login link for everyone else -->
+                <div class="filter-section">
+                    <h6>⚠️ Report a Hazard</h6>
+                    {% if user.is_authenticated %}
+                        <p class="small text-muted mb-2">Click the button, then click the map where the hazard is.</p>
+                        <button id="report-hazard" class="btn btn-danger btn-sm w-100">Report a hazard</button>
+                    {% else %}
+                        <p class="small text-muted mb-2">You need to be logged in to report hazards.</p>
+                        <a class="btn btn-outline-danger btn-sm w-100" href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in to report</a>
+                    {% endif %}
+                </div>
+
+                <!-- Filters: hazard types, hazards near lanes, lane type, stations with bikes -->
+                <div class="filter-section">
+                    <h6>🔍 Filters</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Hazard types</label>
+                        {# One tick box per hazard type, with its map colour #}
+                        {% for value, label in hazard_types %}
+                            <div class="form-check">
+                                <input class="form-check-input hazard-type-filter" type="checkbox" value="{{ value }}" id="hazard-type-{{ value }}" checked>
+                                <label class="form-check-label small" for="hazard-type-{{ value }}">
+                                    <span class="swatch" data-hazard-swatch="{{ value }}"></span>{{ label }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="hazards-near-lanes">
+                            <label class="form-check-label small" for="hazards-near-lanes">Only hazards near cycle lanes</label>
+                        </div>
+                        <div class="input-group input-group-sm mt-1">
+                            <span class="input-group-text">Within</span>
+                            <input type="number" id="near-lanes-distance" class="form-control" value="50" min="1" max="1000">
+                            <span class="input-group-text">m</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="lane-type-filter" class="form-label small fw-semibold">Cycle lane type</label>
+                        <select id="lane-type-filter" class="form-select form-select-sm">
+                            <option value="">All lane types</option>
+                            {% for value, label in lane_types %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="stations-has-bikes">
+                        <label class="form-check-label small" for="stations-has-bikes">Only stations with bikes</label>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button id="apply-filters" class="btn btn-primary btn-sm">Apply Filters</button>
+                        <button id="clear-filters" class="btn btn-outline-secondary btn-sm">Clear All</button>
+                    </div>
+                </div>
+
+                <div class="filter-section mb-0">
+                    <h6>📥 Export Data</h6>
+                    <button id="export-hazards" class="btn btn-outline-success btn-sm export-btn">Hazards GeoJSON</button>
+                    <button id="export-stations" class="btn btn-outline-success btn-sm export-btn">Stations GeoJSON</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9">
+            <div class="position-relative">
+                <div id="map"></div>
+                <!-- Hint banner shown while picking a spot on the map -->
+                <div class="map-hint" id="map-hint"></div>
+                <div class="loading" id="loading">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mb-0">Loading data...</p>
+                </div>
+            </div>
+
+            <!-- Results Summary -->
+            <div class="mt-3">
+                <div class="row g-3">
+                    <div class="col-6 col-md-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Stations Displayed</h6>
+                                <h3 class="text-success mb-0" id="stations-count">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Bikes Available</h6>
+                                <h3 class="text-primary mb-0" id="bikes-count">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Hazards Displayed</h6>
+                                <h3 class="text-danger mb-0" id="hazards-count">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">Lanes Displayed</h6>
+                                <h3 class="text-info mb-0" id="lanes-count">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pop-up form for reporting or editing a hazard -->
+<div class="modal fade" id="hazard-modal" tabindex="-1" aria-labelledby="hazard-modal-title" aria-hidden="true">
+    <div class="modal-dialog">
+        <form class="modal-content" id="hazard-form">
+            <div class="modal-header">
+                <h5 class="modal-title" id="hazard-modal-title">Report a hazard</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none" id="hazard-form-errors"></div>
+                <div class="mb-3">
+                    <label for="hazard-type" class="form-label">Hazard type</label>
+                    <select id="hazard-type" class="form-select" required>
+                        {% for value, label in hazard_types %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-0">
+                    <label for="hazard-description" class="form-label">Description</label>
+                    <textarea id="hazard-description" class="form-control" rows="3" placeholder="e.g. Deep pothole in the cycle lane outside the shop"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger" id="hazard-save">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {# Passes the logged-in user's details to map.js #}
+    {{ map_config|json_script:"map-config" }}
+    <script src="{% static 'js/map.js' %}"></script>
+{% endblock %}

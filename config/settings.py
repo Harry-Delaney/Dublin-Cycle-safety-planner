@@ -78,6 +78,10 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Go back to the map after logging in or out
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
+
 REST_FRAMEWORK = {
     # Anyone can view data; you must be logged in to add or change it
     "DEFAULT_PERMISSION_CLASSES": [

@@ -1,0 +1,154 @@
+body {
+    background-color: #f8f9fa;
+}
+.navbar-brand {
+    font-weight: bold;
+}
+.main-content {
+    min-height: calc(100vh - 76px);
+}
+
+#map {
+    height: 70vh;
+    min-height: 450px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+/* Crosshair cursor while picking a spot on the map */
+#map.picking {
+    cursor: crosshair;
+}
+
+.control-panel {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+.filter-section {
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+.stats-card {
+    background: linear-gradient(135deg, #1e8449 0%, #117a65 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+.export-btn {
+    margin: 5px 5px 0 0;
+}
+.loading {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+/* Banner shown while waiting for a map click */
+.map-hint {
+    display: none;
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: #212529;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+/* Colour dots next to each hazard type in the filters */
+.swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+}
+
+/* Hazard markers: coloured pins with a "!" */
+.hazard-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    border: 2px solid white;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.hazard-icon span {
+    transform: rotate(45deg);
+    color: white;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+/* Info box (top right) and legend (bottom right) on the map */
+.info {
+    padding: 6px 8px;
+    font: 14px/16px Arial, Helvetica, sans-serif;
+    background: white;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+.info h4 {
+    margin: 0 0 5px;
+    color: #777;
+    font-size: 14px;
+}
+.legend {
+    line-height: 18px;
+    color: #555;
+}
+.legend i {
+    width: 18px;
+    height: 18px;
+    float: left;
+    margin-right: 8px;
+    opacity: 0.7;
+}
+.legend i.line {
+    height: 4px;
+    margin-top: 7px;
+    opacity: 1;
+}
+.legend h4 {
+    clear: both;
+    margin-top: 6px;
+}
+.legend h4:first-child {
+    margin-top: 0;
+}
+
+/* Keep the panel beside the map scrollable on large screens */
+@media (min-width: 992px) {
+    .control-panel {
+        max-height: calc(70vh + 130px);
+        overflow-y: auto;
+    }
+}
+
+/* Smaller map on phones and tablets */
+@media (max-width: 991.98px) {
+    #map {
+        height: 60vh;
+        min-height: 350px;
+    }
+}

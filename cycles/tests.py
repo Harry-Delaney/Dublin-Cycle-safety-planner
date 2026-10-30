@@ -162,3 +162,29 @@ class AreaAPITests(APITestCase):
                   for f in response.data["features"]}
         self.assertEqual(counts, {"Busy": 3, "Quiet": 0})
         self.assertEqual(response.data["features"][0]["properties"]["name"], "Busy")
+
+
+# The map page and login page
+class MapPageTests(APITestCase):
+    # Logged out: the map loads, shows the login prompt and sets the CSRF cookie
+    def test_map_page_renders(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, 'id="map"')
+        self.assertContains(response, 'id="map-config"')
+        self.assertContains(response, "Log in to report")
+        self.assertIn("csrftoken", response.cookies)
+
+    # The login page has a username field
+    def test_login_page_renders(self):
+        response = self.client.get("/accounts/login/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertContains(response, 'name="username"')
+
+    # Logged in: the report button shows and the username is passed to map.js
+    def test_report_button_when_logged_in(self):
+        user = get_user_model().objects.create_user("carol", password="pw")
+        self.client.force_login(user)
+        response = self.client.get("/")
+        self.assertContains(response, 'id="report-hazard"')
+        self.assertContains(response, '"username": "carol"')

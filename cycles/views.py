@@ -1,4 +1,6 @@
 from django.contrib.gis.geos import Point
+from django.shortcuts import render
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -141,3 +143,25 @@ class AreaViewSet(viewsets.ReadOnlyModelViewSet):
             .order_by("-hazard_count", "name")
         )
         return Response(AreaHazardCountSerializer(areas, many=True).data)
+
+
+# The map page. ensure_csrf_cookie gives the browser the token map.js needs
+# to send when reporting, editing or deleting hazards.
+@ensure_csrf_cookie
+def index(request):
+    user = request.user
+    context = {
+        "total_stations": BikeStation.objects.count(),
+        "total_hazards": HazardReport.objects.count(),
+        "total_lanes": CycleLane.objects.count(),
+        "total_areas": Area.objects.count(),
+        "hazard_types": HazardReport.HazardType.choices,
+        "lane_types": CycleLane.LaneType.choices,
+        # Who is logged in, passed to map.js so it knows whether to show edit/delete buttons
+        "map_config": {
+            "isAuthenticated": user.is_authenticated,
+            "username": user.get_username() if user.is_authenticated else None,
+            "isStaff": user.is_staff,
+        },
+    }
+    return render(request, "cycles/index.html", context)
