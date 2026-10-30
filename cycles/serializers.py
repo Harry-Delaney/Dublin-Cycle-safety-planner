@@ -14,6 +14,7 @@ class BikeStationSerializer(GeoFeatureModelSerializer):
         ]
 
 
+# Bike station plus its distance in metres from the search point (used by "nearest")
 class BikeStationDistanceSerializer(BikeStationSerializer):
 
     distance_m = serializers.SerializerMethodField()
@@ -26,7 +27,9 @@ class BikeStationDistanceSerializer(BikeStationSerializer):
 
 
 class HazardReportSerializer(GeoFeatureModelSerializer):
+    # Show the reporter's username, set automatically rather than sent by the user
     reported_by = serializers.StringRelatedField(read_only=True)
+    # Readable hazard type, e.g. "Dangerous junction" instead of "dangerous_junction"
     hazard_type_display = serializers.CharField(
         source="get_hazard_type_display", read_only=True
     )
@@ -41,6 +44,7 @@ class HazardReportSerializer(GeoFeatureModelSerializer):
         read_only_fields = ["created_at", "updated_at"]
 
 
+# Hazard report plus its distance in metres from the search point (used by "nearby")
 class HazardReportDistanceSerializer(HazardReportSerializer):
 
     distance_m = serializers.SerializerMethodField()
@@ -53,6 +57,7 @@ class HazardReportDistanceSerializer(HazardReportSerializer):
 
 
 class CycleLaneSerializer(GeoFeatureModelSerializer):
+    # Readable lane type, e.g. "Segregated"
     lane_type_display = serializers.CharField(
         source="get_lane_type_display", read_only=True
     )
@@ -70,6 +75,7 @@ class AreaSerializer(GeoFeatureModelSerializer):
         fields = ["id", "name", "code"]
 
 
+# Area plus the number of hazards inside it (used by "hazard_counts")
 class AreaHazardCountSerializer(AreaSerializer):
 
     hazard_count = serializers.IntegerField(read_only=True)

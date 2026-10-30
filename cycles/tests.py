@@ -5,10 +5,13 @@ from rest_framework.test import APITestCase
 
 from .models import Area, BikeStation, CycleLane, HazardReport
 
+# Test location used throughout: O'Connell Bridge, Dublin
 LNG, LAT = -6.2592, 53.3473
 
 
+# Bike station endpoints and the "nearest" search
 class BikeStationAPITests(APITestCase):
+    # Three stations about 70 m, 700 m and 3.5 km east of the test location (one has no bikes)
     @classmethod
     def setUpTestData(cls):
         BikeStation.objects.create(station_id="1", name="Close empty", available_bikes=0,
@@ -18,18 +21,22 @@ class BikeStationAPITests(APITestCase):
         BikeStation.objects.create(station_id="3", name="Far", available_bikes=9,
                                    location=Point(LNG + 0.05, LAT, srid=4326))
 
+    # The list comes back as GeoJSON with all stations
     def test_list_is_feature_collection(self):
         response = self.client.get("/api/stations/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["type"], "FeatureCollection")
         self.assertEqual(len(response.data["features"]), 3)
 
+    # Nearest stations are sorted closest first, with distances in metres
     def test_nearest_orders_by_distance(self):
         response = self.client.get("/api/stations/nearest/", {"lat": LAT, "lng": LNG})
         names = [f["properties"]["name"] for f in response.data["features"]]
         self.assertEqual(names, ["Close empty", "Medium", "Far"])
         self.assertAlmostEqual(response.data["features"][0]["properties"]["distance_m"], 66, delta=5)
 
+    # The north station is closer in degrees but the east one is closer in metres;
+    # the east one must come first
     def test_nearest_uses_metres_not_degrees(self):
         north = BikeStation.objects.create(station_id="N", name="North",
                                            location=Point(LNG, LAT + 0.004, srid=4326))
@@ -39,6 +46,7 @@ class BikeStationAPITests(APITestCase):
                        .nearest(Point(LNG, LAT, srid=4326), limit=2))
         self.assertEqual(nearest, [east, north])
 
+    # has_bikes=true skips the empty station
     def test_nearest_with_bikes_skips_empty_station(self):
         response = self.client.get(
             "/api/stations/nearest/", {"lat": LAT, "lng": LNG, "has_bikes": "true", "limit": 1}
@@ -46,16 +54,20 @@ class BikeStationAPITests(APITestCase):
         names = [f["properties"]["name"] for f in response.data["features"]]
         self.assertEqual(names, ["Medium"])
 
+    # Missing coordinates give a 400 error
     def test_nearest_requires_coordinates(self):
         response = self.client.get("/api/stations/nearest/")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    # Impossible coordinates (latitude 95) give a 400 error
     def test_nearest_rejects_out_of_range_coordinates(self):
         response = self.client.get("/api/stations/nearest/", {"lat": 95, "lng": LNG})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
+# Hazard endpoints, spatial searches and permissions
 class HazardReportAPITests(APITestCase):
+    # Two users, one north-south cycle lane, and two hazards about 33 m and 330 m from the lane
     @classmethod
     def setUpTestData(cls):
         User = get_user_model()
@@ -70,6 +82,7 @@ class HazardReportAPITests(APITestCase):
         cls.far = HazardReport.objects.create(hazard_type="obstruction", reported_by=cls.bob,
                                               location=Point(LNG + 0.005, LAT, srid=4326))
 
+    # Only the hazard within 50 m of the lane is returned; at 500 m both are
     def test_near_lanes_uses_metres(self):
         response = self.client.get("/api/hazards/near_lanes/")
         ids = [f["id"] for f in response.data["features"]]
@@ -78,32 +91,38 @@ class HazardReportAPITests(APITestCase):
         response = self.client.get("/api/hazards/near_lanes/", {"distance": 500})
         self.assertEqual(len(response.data["features"]), 2)
 
+    # Only hazards within 100 m of the test location are returned
     def test_nearby(self):
         response = self.client.get("/api/hazards/nearby/", {"lat": LAT, "lng": LNG, "distance": 100})
         ids = [f["id"] for f in response.data["features"]]
         self.assertEqual(ids, [self.near.id])
 
+    # Distances of 0 or non-numbers give a 400 error
     def test_distance_must_be_in_range(self):
         response = self.client.get("/api/hazards/near_lanes/", {"distance": 0})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         response = self.client.get("/api/hazards/nearby/", {"lat": LAT, "lng": LNG, "distance": "far"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    # Filtering by hazard type
     def test_filter_by_type(self):
         response = self.client.get("/api/hazards/", {"hazard_type": "obstruction"})
         ids = [f["id"] for f in response.data["features"]]
         self.assertEqual(ids, [self.far.id])
 
+    # Logged-out users cannot report hazards
     def test_anonymous_cannot_create(self):
         response = self.client.post("/api/hazards/", self._payload(), format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    # A logged-in user can report a hazard and is recorded as the reporter
     def test_create_sets_reporter(self):
         self.client.force_authenticate(self.alice)
         response = self.client.post("/api/hazards/", self._payload(), format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["properties"]["reported_by"], "alice")
 
+    # Another user cannot edit the hazard, but the reporter can delete it
     def test_only_reporter_can_edit(self):
         self.client.force_authenticate(self.bob)
         response = self.client.patch(f"/api/hazards/{self.near.id}/", {"description": "x"}, format="json")
@@ -113,6 +132,7 @@ class HazardReportAPITests(APITestCase):
         response = self.client.delete(f"/api/hazards/{self.near.id}/")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
+    # A new hazard in GeoJSON format, as the map would send it
     def _payload(self):
         return {
             "type": "Feature",
@@ -121,7 +141,9 @@ class HazardReportAPITests(APITestCase):
         }
 
 
+# Hazard counts per area
 class AreaAPITests(APITestCase):
+    # Two square areas side by side, with three hazards inside the first
     @classmethod
     def setUpTestData(cls):
         def square(x, y, size=0.01):
@@ -133,6 +155,7 @@ class AreaAPITests(APITestCase):
             HazardReport.objects.create(hazard_type="pothole",
                                         location=Point(LNG + offset, LAT + 0.005, srid=4326))
 
+    # The busy area has 3 hazards, the quiet one 0, and the busy one is listed first
     def test_hazard_counts(self):
         response = self.client.get("/api/areas/hazard_counts/")
         counts = {f["properties"]["name"]: f["properties"]["hazard_count"]

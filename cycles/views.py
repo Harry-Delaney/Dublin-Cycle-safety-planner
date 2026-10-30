@@ -37,6 +37,8 @@ def parse_search_point(data):
     return Point(lng, lat, srid=4326), None
 
 
+# Reads a number (e.g. distance or limit) from the request, using a default if missing.
+# It must be above 0 and no more than the maximum.
 def parse_number(data, name, default, maximum):
     try:
         value = float(data.get(name, default))
@@ -56,6 +58,8 @@ class BikeStationViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_class = BikeStationFilter
     bbox_filter_field = "location"
 
+    
+    # Closest stations to a point, with the distance to each
     @action(detail=False, methods=["get"])
     def nearest(self, request):
         point, error = parse_search_point(request.query_params)
@@ -65,10 +69,13 @@ class BikeStationViewSet(viewsets.ReadOnlyModelViewSet):
         if error:
             return error
 
+        # Apply any filters first (e.g. has_bikes=true), then find the nearest
         stations = self.filter_queryset(self.get_queryset()).nearest(point, int(limit))
         return Response(BikeStationDistanceSerializer(stations, many=True).data)
 
 
+# Hazard reports at /api/hazards/
+# Anyone can view them; logged-in users can add them; only the reporter can edit or delete
 class HazardReportViewSet(viewsets.ModelViewSet):
     queryset = HazardReport.objects.select_related("reported_by")
     serializer_class = HazardReportSerializer
@@ -78,6 +85,7 @@ class HazardReportViewSet(viewsets.ModelViewSet):
     filterset_class = HazardReportFilter
     bbox_filter_field = "location"
 
+    # Record the logged-in user as the reporter of a new hazard
     def perform_create(self, serializer):
         serializer.save(reported_by=self.request.user)
 
@@ -93,6 +101,8 @@ class HazardReportViewSet(viewsets.ModelViewSet):
         hazards = self.filter_queryset(self.get_queryset()).within_distance(point, distance)
         return Response(HazardReportDistanceSerializer(hazards, many=True).data)
 
+    # /api/hazards/near_lanes/?distance=50
+    # Hazards within a distance (in metres) of any cycle lane
     @action(detail=False, methods=["get"])
     def near_lanes(self, request):
         distance, error = parse_number(request.query_params, "distance", 50, 1000)
@@ -110,7 +120,7 @@ class CycleLaneViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend, InBBoxFilter]
     filterset_class = CycleLaneFilter
     bbox_filter_field = "geometry"
-    bbox_filter_include_overlapping = True
+    bbox_filter_include_overlapping = True  # Include lanes that are partly inside the box
 
 
 class AreaViewSet(viewsets.ReadOnlyModelViewSet):
@@ -121,6 +131,8 @@ class AreaViewSet(viewsets.ReadOnlyModelViewSet):
     bbox_filter_field = "geometry"
     bbox_filter_include_overlapping = True
 
+    # /api/areas/hazard_counts/
+    # Every area with the number of hazards inside it, most hazards first
     @action(detail=False, methods=["get"])
     def hazard_counts(self, request):
         areas = (
@@ -129,4 +141,3 @@ class AreaViewSet(viewsets.ReadOnlyModelViewSet):
             .order_by("-hazard_count", "name")
         )
         return Response(AreaHazardCountSerializer(areas, many=True).data)
-
