@@ -110,7 +110,7 @@ body {
 }
 .info h4 {
     margin: 0 0 5px;
-    color: #777;
+    color: #555;
     font-size: 14px;
 }
 .legend {
@@ -137,6 +137,26 @@ body {
     margin-top: 0;
 }
 
+/* Skip link sits over the navbar when it gets keyboard focus */
+.skip-link {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2000;
+    background: white;
+    color: #146c43;
+    padding: 8px 14px;
+    border-radius: 5px;
+    font-weight: 600;
+}
+
+/* Clear focus outline on the map and its markers */
+#map:focus-visible,
+.leaflet-marker-icon:focus-visible {
+    outline: 3px solid #0d6efd;
+    outline-offset: 2px;
+}
+
 /* Keep the panel beside the map scrollable on large screens */
 @media (min-width: 992px) {
     .control-panel {
@@ -145,10 +165,19 @@ body {
     }
 }
 
-/* Smaller map on phones and tablets */
+/* Smaller map and bigger buttons on phones and tablets */
 @media (max-width: 991.98px) {
     #map {
         height: 60vh;
         min-height: 350px;
+    }
+    .control-panel .btn-sm,
+    .control-panel .form-control-sm,
+    .control-panel .form-select-sm {
+        min-height: 44px;
+    }
+    .map-hint {
+        width: 90%;
+        text-align: center;
     }
 }

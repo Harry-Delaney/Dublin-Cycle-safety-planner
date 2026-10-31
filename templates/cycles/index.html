@@ -5,32 +5,34 @@
 
 {% block content %}
 <div class="container-fluid mt-3">
+    <h1 class="visually-hidden">Dublin cycle safety map</h1>
+    <!-- On phones the map comes first and the controls go underneath -->
     <div class="row">
         <!-- Control Panel -->
-        <div class="col-lg-3">
+        <div class="col-lg-3 order-2 order-lg-1">
             <div class="control-panel">
                 <h5>📊 Data Overview</h5>
                 <div class="stats-card">
-                    <h6>Bike Stations: <span id="total-stations">{{ total_stations }}</span></h6>
-                    <h6>Hazard Reports: <span id="total-hazards">{{ total_hazards }}</span></h6>
-                    <h6>Cycle Lanes: <span id="total-lanes">{{ total_lanes }}</span></h6>
-                    <h6 class="mb-0">Areas: <span id="total-areas">{{ total_areas }}</span></h6>
+                    <p class="h6">Bike Stations: <span id="total-stations">{{ total_stations }}</span></p>
+                    <p class="h6">Hazard Reports: <span id="total-hazards">{{ total_hazards }}</span></p>
+                    <p class="h6">Cycle Lanes: <span id="total-lanes">{{ total_lanes }}</span></p>
+                    <p class="h6 mb-0">Areas: <span id="total-areas">{{ total_areas }}</span></p>
                 </div>
 
                 <div class="filter-section">
                     <h6>📍 Proximity Search</h6>
                     <div class="btn-group w-100 mb-2" role="group" aria-label="Proximity search type">
-                        <button type="button" id="nearest-search-btn" class="btn btn-outline-success btn-sm">Nearest bikes</button>
-                        <button type="button" id="radius-search-btn" class="btn btn-outline-success btn-sm">Hazards nearby</button>
+                        <button type="button" id="nearest-search-btn" class="btn btn-outline-success btn-sm" aria-pressed="false">Nearest bikes</button>
+                        <button type="button" id="radius-search-btn" class="btn btn-outline-success btn-sm" aria-pressed="false">Hazards nearby</button>
                     </div>
                     <div id="radius-control" class="input-group input-group-sm mb-2 d-none">
-                        <span class="input-group-text">Radius</span>
+                        <label class="input-group-text" for="radius-input">Radius</label>
                         <input type="number" id="radius-input" class="form-control" value="500" min="50" max="5000" step="50">
                         <span class="input-group-text">m</span>
                     </div>
                     <button type="button" id="locate-btn" class="btn btn-success btn-sm w-100">Use my location</button>
-                    <p id="proximity-status" class="small text-muted mt-2 mb-1">Choose a search, then click the map.</p>
-                    <div id="proximity-results" class="list-group"></div>
+                    <p id="proximity-status" class="small text-muted mt-2 mb-1" role="status" aria-live="polite">Choose a search, then click the map, or use your location.</p>
+                    <div id="proximity-results" class="list-group" aria-live="polite"></div>
                 </div>
 
                 <!-- Report a hazard: button for logged-in users, login link for everyone else -->
@@ -38,7 +40,7 @@
                     <h6>⚠️ Report a Hazard</h6>
                     {% if user.is_authenticated %}
                         <p class="small text-muted mb-2">Click the button, then click the map where the hazard is.</p>
-                        <button id="report-hazard" class="btn btn-danger btn-sm w-100">Report a hazard</button>
+                        <button type="button" id="report-hazard" class="btn btn-danger btn-sm w-100">Report a hazard</button>
                     {% else %}
                         <p class="small text-muted mb-2">You need to be logged in to report hazards.</p>
                         <a class="btn btn-outline-danger btn-sm w-100" href="{% url 'login' %}?next={{ request.path|urlencode }}">Log in to report</a>
@@ -49,8 +51,8 @@
                 <div class="filter-section">
                     <h6>🔍 Filters</h6>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Hazard types</label>
+                    <fieldset class="mb-3">
+                        <legend class="form-label small fw-semibold">Hazard types</legend>
                         {# One tick box per hazard type, with its map colour #}
                         {% for value, label in hazard_types %}
                             <div class="form-check">
@@ -60,7 +62,7 @@
                                 </label>
                             </div>
                         {% endfor %}
-                    </div>
+                    </fieldset>
 
                     <div class="mb-3">
                         <div class="form-check">
@@ -68,7 +70,7 @@
                             <label class="form-check-label small" for="hazards-near-lanes">Only hazards near cycle lanes</label>
                         </div>
                         <div class="input-group input-group-sm mt-1">
-                            <span class="input-group-text">Within</span>
+                            <label class="input-group-text" for="near-lanes-distance">Within</label>
                             <input type="number" id="near-lanes-distance" class="form-control" value="50" min="1" max="1000">
                             <span class="input-group-text">m</span>
                         </div>
@@ -90,24 +92,24 @@
                     </div>
 
                     <div class="d-grid gap-2">
-                        <button id="apply-filters" class="btn btn-primary btn-sm">Apply Filters</button>
-                        <button id="clear-filters" class="btn btn-outline-secondary btn-sm">Clear All</button>
+                        <button type="button" id="apply-filters" class="btn btn-primary btn-sm">Apply Filters</button>
+                        <button type="button" id="clear-filters" class="btn btn-outline-secondary btn-sm">Clear All</button>
                     </div>
                 </div>
 
                 <div class="filter-section mb-0">
                     <h6>📥 Export Data</h6>
-                    <button id="export-hazards" class="btn btn-outline-success btn-sm export-btn">Hazards GeoJSON</button>
-                    <button id="export-stations" class="btn btn-outline-success btn-sm export-btn">Stations GeoJSON</button>
+                    <button type="button" id="export-hazards" class="btn btn-outline-success btn-sm export-btn">Hazards GeoJSON</button>
+                    <button type="button" id="export-stations" class="btn btn-outline-success btn-sm export-btn">Stations GeoJSON</button>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-9">
+        <div class="col-lg-9 order-1 order-lg-2 mb-3 mb-lg-0">
             <div class="position-relative">
-                <div id="map"></div>
+                <div id="map" role="region" aria-label="Map of Dublin cycle lanes, bike stations and hazard reports"></div>
                 <!-- Hint banner shown while picking a spot on the map -->
-                <div class="map-hint" id="map-hint"></div>
+                <div class="map-hint" id="map-hint" aria-live="polite"></div>
                 <div class="loading" id="loading">
                     <div class="spinner-border text-success" role="status">
                         <span class="visually-hidden">Loading...</span>
@@ -123,7 +125,7 @@
                         <div class="card h-100">
                             <div class="card-body text-center">
                                 <h6 class="card-title">Stations Displayed</h6>
-                                <h3 class="text-success mb-0" id="stations-count">0</h3>
+                                <p class="h3 text-success mb-0" id="stations-count">0</p>
                             </div>
                         </div>
                     </div>
@@ -131,7 +133,7 @@
                         <div class="card h-100">
                             <div class="card-body text-center">
                                 <h6 class="card-title">Bikes Available</h6>
-                                <h3 class="text-primary mb-0" id="bikes-count">0</h3>
+                                <p class="h3 text-primary mb-0" id="bikes-count">0</p>
                             </div>
                         </div>
                     </div>
@@ -139,7 +141,7 @@
                         <div class="card h-100">
                             <div class="card-body text-center">
                                 <h6 class="card-title">Hazards Displayed</h6>
-                                <h3 class="text-danger mb-0" id="hazards-count">0</h3>
+                                <p class="h3 text-danger mb-0" id="hazards-count">0</p>
                             </div>
                         </div>
                     </div>
@@ -147,7 +149,7 @@
                         <div class="card h-100">
                             <div class="card-body text-center">
                                 <h6 class="card-title">Lanes Displayed</h6>
-                                <h3 class="text-info mb-0" id="lanes-count">0</h3>
+                                <p class="h3 text-info-emphasis mb-0" id="lanes-count">0</p>
                             </div>
                         </div>
                     </div>
@@ -166,7 +168,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="alert alert-danger d-none" id="hazard-form-errors"></div>
+                <div class="alert alert-danger d-none" id="hazard-form-errors" role="alert"></div>
                 <div class="mb-3">
                     <label for="hazard-type" class="form-label">Hazard type</label>
                     <select id="hazard-type" class="form-select" required>

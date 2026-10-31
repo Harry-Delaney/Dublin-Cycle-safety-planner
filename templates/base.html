@@ -18,6 +18,9 @@
     {% block head_extra %}{% endblock %}
 </head>
 <body>
+    <!-- Skip link: hidden until a keyboard user presses Tab -->
+    <a class="visually-hidden-focusable skip-link" href="#main-content">Skip to main content</a>
+
     <!-- Navigation. Collapses into a menu button on small screens and shows login or logout -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-success">
         <div class="container-fluid">
@@ -50,7 +53,7 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="main-content" id="main-content" tabindex="-1">
         {% block content %}
         {% endblock %}
     </main>

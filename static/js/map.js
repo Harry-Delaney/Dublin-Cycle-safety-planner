@@ -277,7 +277,10 @@ function displayHazards(hazards) {
     layers.hazards.clearLayers();
 
     L.geoJSON(hazards, {
-        pointToLayer: (feature, latlng) => L.marker(latlng, { icon: hazardIcon(feature.properties.hazard_type) }),
+        pointToLayer: (feature, latlng) => L.marker(latlng, {
+            icon: hazardIcon(feature.properties.hazard_type),
+            title: `${feature.properties.hazard_type_display} hazard`
+        }),
         onEachFeature: (feature, layer) => layer.bindPopup(() => hazardPopup(feature))
     }).addTo(layers.hazards);
 }
@@ -465,15 +468,18 @@ function clearFilters() {
 function setClickMode(mode) {
     clickMode = mode;
     document.getElementById('radius-control').classList.toggle('d-none', mode !== 'radius');
-    document.getElementById('nearest-search-btn').classList.toggle('active', mode === 'nearest');
-    document.getElementById('radius-search-btn').classList.toggle('active', mode === 'radius');
+    ['nearest', 'radius'].forEach(name => {
+        const button = document.getElementById(`${name}-search-btn`);
+        button.classList.toggle('active', mode === name);
+        button.setAttribute('aria-pressed', mode === name);
+    });
     map.getContainer().classList.toggle('picking', mode !== null);
 
     const hint = document.getElementById('map-hint');
     const messages = {
-        nearest: 'Click the map to find the nearest bikes (Esc to stop)',
-        radius: 'Click the map to find hazards nearby (Esc to stop)',
-        report: 'Click the map where the hazard is (Esc to cancel)'
+        nearest: 'Click the map to find the nearest bikes, or press Enter on the map to use its centre (Esc to stop)',
+        radius: 'Click the map to find hazards nearby, or press Enter on the map to use its centre (Esc to stop)',
+        report: 'Click the map where the hazard is, or press Enter on the map to use its centre (Esc to cancel)'
     };
     hint.textContent = messages[mode] || '';
     hint.style.display = mode ? 'block' : 'none';
@@ -681,8 +687,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (element) element.addEventListener('click', handler);
     });
 
+    // Esc cancels a map pick. Enter on the focused map picks its centre, so it works without a mouse.
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') setClickMode(null);
+        if (e.key === 'Enter' && clickMode && e.target === map.getContainer()) {
+            map.fire('click', { latlng: map.getCenter() });
+        }
     });
 
     applyFilters();
