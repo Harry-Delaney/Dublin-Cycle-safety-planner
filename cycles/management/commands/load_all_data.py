@@ -1,9 +1,11 @@
+import os
+
 from django.core.management import call_command
 from django.core.management.base import BaseCommand
 
 
 class Command(BaseCommand):
-    help = "Load all open datasets from data/ (areas, then lanes clipped to them, then stations)"
+    help = "Load all data from data/ (areas, lanes, stations, then the demo user and sample hazards)"
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS("🚀 Loading Cycle Safe open data...\n"))
@@ -17,6 +19,16 @@ class Command(BaseCommand):
 
         self.stdout.write("\n🚲 Loading bike stations...")
         call_command("load_stations")
+
+        # The demo account and its sample hazards are only added if a demo password is set
+        if os.environ.get("DEMO_USER_PASSWORD"):
+            self.stdout.write("\n👤 Creating demo user...")
+            call_command("create_demo_user")
+
+            self.stdout.write("\n⚠️  Loading sample hazards...")
+            call_command("load_sample_hazards")
+        else:
+            self.stdout.write("\nSkipping demo user and sample hazards (DEMO_USER_PASSWORD not set)")
 
         self.stdout.write(
             self.style.SUCCESS(

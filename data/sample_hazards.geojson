@@ -1,0 +1,18 @@
+{
+"type": "FeatureCollection",
+"name": "Cycle Safe sample hazards (demo data)",
+"features": [
+{ "type": "Feature", "properties": { "hazard_type": "pothole", "description": "Deep pothole on the canal cycle track near Portobello Bridge" }, "geometry": { "type": "Point", "coordinates": [ -6.2652, 53.3306 ] } },
+{ "type": "Feature", "properties": { "hazard_type": "obstruction", "description": "Wheelie bins left across the canal cycle track" }, "geometry": { "type": "Point", "coordinates": [ -6.2618, 53.3311 ] } },
+{ "type": "Feature", "properties": { "hazard_type": "dangerous_junction", "description": "Cars turning left cut across the cycle lane at the canal bridge" }, "geometry": { "type": "Point", "coordinates": [ -6.2497, 53.3322 ] } },
+{ "type": "Feature", "properties": { "hazard_type": "dangerous_junction", "description": "Left-turning buses cross the cycle lane at O'Connell Bridge" }, "geometry": { "type": "Point", "coordinates": [ -6.2593, 53.3468 ] } },
+{ "type": "Feature", "properties": { "hazard_type": "pothole", "description": "Broken surface on the Clontarf promenade cycle track" }, "geometry": { "type": "Point", "coordinates": [ -6.2050, 53.3606 ] } },
+{ "type": "Feature", "properties": { "hazard_type": "poor_visibility", "description": "Tight bend under the bridge on the Royal Canal greenway, no view of oncoming bikes" }, "geometry": { "type": "Point", "coordinates": [ -6.2512, 53.3592 ] } },
+{ "type": "Feature", "properties": { "hazard_type": "other", "description": "Loose gravel across the cycle lane on Chesterfield Avenue" }, "geometry": { "type": "Point", "coordinates": [ -6.3195, 53.3578 ] } },
+{ "type": "Feature", "properties": { "hazard_type": "obstruction", "description": "Delivery vans regularly parked in the cycle lane" }, "geometry": { "type": "Point", "coordinates": [ -6.2470, 53.3366 ] } },
+{ "type": "Feature", "properties": { "hazard_type": "pothole", "description": "Uneven cobbles that catch bike wheels" }, "geometry": { "type": "Point", "coordinates": [ -6.2645, 53.3452 ] } },
+{ "type": "Feature", "properties": { "hazard_type": "poor_visibility", "description": "Parked cars block the view of traffic at this junction" }, "geometry": { "type": "Point", "coordinates": [ -6.2805, 53.3540 ] } },
+{ "type": "Feature", "properties": { "hazard_type": "other", "description": "Broken glass on the road, there most weekends" }, "geometry": { "type": "Point", "coordinates": [ -6.2783, 53.3243 ] } },
+{ "type": "Feature", "properties": { "hazard_type": "obstruction", "description": "Roadworks barriers left on the road with no diversion for bikes" }, "geometry": { "type": "Point", "coordinates": [ -6.2282, 53.3404 ] } }
+]
+}

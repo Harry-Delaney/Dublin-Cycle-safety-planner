@@ -1,7 +1,9 @@
 import json
+import os
 import tempfile
 from io import StringIO
 from pathlib import Path
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import LineString, MultiPolygon, Point, Polygon
@@ -294,3 +296,37 @@ class LoadDataCommandTests(APITestCase):
         path = self.write_geojson("stations.geojson", [station("1", bikes=9)])
         call_command("load_stations", path=path, stdout=StringIO())
         self.assertEqual(BikeStation.objects.get().available_bikes, 9)
+
+
+# Demo account and sample hazards
+@mock.patch.dict(os.environ, {"DEMO_USER_PASSWORD": "demo-pass"})
+class DemoDataCommandTests(APITestCase):
+    # Demo user is a normal account with the password from .env, and is not duplicated
+    def test_create_demo_user(self):
+        call_command("create_demo_user", stdout=StringIO())
+        call_command("create_demo_user", stdout=StringIO())
+        demo = get_user_model().objects.get(username="demo")
+        self.assertTrue(demo.check_password("demo-pass"))
+        self.assertFalse(demo.is_staff or demo.is_superuser)
+
+    # No password set means no demo user
+    def test_create_demo_user_needs_password(self):
+        with mock.patch.dict(os.environ, {"DEMO_USER_PASSWORD": ""}):
+            with self.assertRaises(CommandError):
+                call_command("create_demo_user", stdout=StringIO())
+
+    # Every sample hazard loads once, reported by the demo user
+    def test_load_sample_hazards(self):
+        call_command("create_demo_user", stdout=StringIO())
+        call_command("load_sample_hazards", stdout=StringIO())
+        call_command("load_sample_hazards", stdout=StringIO())
+
+        sample_file = Path(__file__).resolve().parent.parent / "data" / "sample_hazards.geojson"
+        expected = len(json.loads(sample_file.read_text())["features"])
+        self.assertEqual(HazardReport.objects.count(), expected)
+        self.assertEqual(HazardReport.objects.exclude(reported_by__username="demo").count(), 0)
+
+    # Sample hazards need the demo user first
+    def test_load_sample_hazards_needs_demo_user(self):
+        with self.assertRaises(CommandError):
+            call_command("load_sample_hazards", stdout=StringIO())
