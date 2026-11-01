@@ -320,8 +320,19 @@ function areaStyle(feature) {
     };
 }
 
+// Remembers the outlined area, so a missed mouseout on a fast move can't leave an outline behind
+let highlightedArea = null;
+
+function clearHighlight() {
+    if (highlightedArea && areasGeoJson) areasGeoJson.resetStyle(highlightedArea);
+    highlightedArea = null;
+    info.update();
+}
+
 function highlightFeature(e) {
     const layer = e.target;
+    if (highlightedArea && highlightedArea !== layer) clearHighlight();
+    highlightedArea = layer;
     layer.setStyle({
         weight: 4,
         color: '#666',
@@ -332,9 +343,8 @@ function highlightFeature(e) {
     info.update(layer.feature.properties);
 }
 
-function resetHighlight(e) {
-    areasGeoJson.resetStyle(e.target);
-    info.update();
+function resetHighlight() {
+    clearHighlight();
 }
 
 function zoomToFeature(e) {
@@ -343,6 +353,7 @@ function zoomToFeature(e) {
 }
 
 function displayAreas(areas) {
+    highlightedArea = null;
     layers.areas.clearLayers();
 
     areasGeoJson = L.geoJSON(areas, {
@@ -375,6 +386,7 @@ info.update = function (props) {
 
 info.addTo(map);
 
+map.on('mouseout', clearHighlight);
 map.on('overlayadd', e => { if (e.layer === layers.areas) info.addTo(map); });
 map.on('overlayremove', e => { if (e.layer === layers.areas) info.remove(); });
 
