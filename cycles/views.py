@@ -21,10 +21,13 @@ from .serializers import (
 )
 
 
+# Sends back an error message with a 400 (bad request) status
 def error_response(message):
     return Response({"error": message}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# Reads lat and lng from the request and turns them into a point.
+# Returns an error instead if they're missing or out of range.
 def parse_search_point(data):
     try:
         lat = float(data["lat"])
@@ -52,6 +55,7 @@ def parse_number(data, name, default, maximum):
     return value, None
 
 
+# Bike stations at /api/stations/ (read only)
 class BikeStationViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = BikeStation.objects.all()
     serializer_class = BikeStationSerializer
@@ -115,6 +119,7 @@ class HazardReportViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(hazards, many=True).data)
 
 
+# Cycle lanes at /api/lanes/ (read only)
 class CycleLaneViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = CycleLane.objects.all()
     serializer_class = CycleLaneSerializer
@@ -125,6 +130,7 @@ class CycleLaneViewSet(viewsets.ReadOnlyModelViewSet):
     bbox_filter_include_overlapping = True  # Include lanes that are partly inside the box
 
 
+# Areas at /api/areas/ (read only)
 class AreaViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Area.objects.all()
     serializer_class = AreaSerializer

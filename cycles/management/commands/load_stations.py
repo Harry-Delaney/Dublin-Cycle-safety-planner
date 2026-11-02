@@ -29,6 +29,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("✓ Existing stations cleared"))
 
         self.stdout.write(f"Loading stations from {options['path']}...")
+        # Open the GeoJSON file and go through each station in it
         layer = DataSource(options["path"])[0]
 
         created_count = 0
@@ -36,7 +37,7 @@ class Command(BaseCommand):
         skipped_count = 0
 
         for feature in layer:
-            # Skip uninstalled stations and copy the fields across
+            # Skip stations that aren't installed
             if not feature.get("is_installed"):
                 skipped_count += 1
                 continue
@@ -45,6 +46,7 @@ class Command(BaseCommand):
             point.srid = 4326
             last_reported = feature.get("last_reported")
 
+            # Update the station if it's already loaded, otherwise create it
             station, created = BikeStation.objects.update_or_create(
                 station_id=str(feature.get("station_id")),
                 defaults={

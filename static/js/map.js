@@ -1,8 +1,10 @@
-// Who is logged in (from the page), and the colours used for hazard and lane types
+// Details of the logged-in user, passed in from the Django page
 const config = JSON.parse(document.getElementById('map-config').textContent);
 
+// The map opens centred on Dublin city centre
 const DUBLIN_CENTRE = [53.3498, -6.2603];
 
+// Colour for each hazard type, used for the pins and the dots in the filters
 const HAZARD_COLORS = {
     pothole: '#e67e22',
     poor_visibility: '#8e44ad',
@@ -11,6 +13,7 @@ const HAZARD_COLORS = {
     other: '#7f8c8d'
 };
 
+// Colour for each type of cycle lane
 const LANE_COLORS = {
     segregated: '#1e8449',
     painted: '#2e86c1',
@@ -19,6 +22,7 @@ const LANE_COLORS = {
     other: '#95a5a6'
 };
 
+// Create the map at zoom level 13
 const map = L.map('map').setView(DUBLIN_CENTRE, 13);
 
 // Background maps: OpenStreetMap by default, or CyclOSM, a free OpenStreetMap style that
@@ -61,9 +65,11 @@ L.control.layers(
     }
 ).addTo(map);
 
+// Search results (circles, rings and lines) go on their own layer so they're easy to clear
 const proximityLayer = L.featureGroup().addTo(map);
 let pendingMarker = null;
 
+// The features currently on the map, used for the counts and the exports
 const current = { stations: [], hazards: [], lanes: [], areas: [] };
 let areasGeoJson = null;
 
@@ -72,6 +78,7 @@ let clickMode = null;
 let pendingLocation = null;
 let editingHazardId = null;
 
+// Shows or hides the "Loading data..." box over the map
 function showLoading(show) {
     document.getElementById('loading').style.display = show ? 'block' : 'none';
 }
@@ -83,16 +90,19 @@ function escapeHtml(value) {
     return div.innerHTML;
 }
 
+// e.g. 850 becomes "850 m" and 1500 becomes "1.5 km"
 function formatDistance(metres) {
     return metres < 1000 ? `${Math.round(metres)} m` : `${(metres / 1000).toFixed(1)} km`;
 }
 
+// Red when empty, orange for 1-2 bikes, green for 3 or more
 function getStationColor(availableBikes) {
     if (availableBikes === 0) return '#e74c3c';
     if (availableBikes < 3) return '#f39c12';
     return '#27ae60';
 }
 
+// Hazard counts where the area colour changes (also used to build the legend)
 const AREA_GRADES = [0, 1, 5, 10, 20];
 
 function getAreaColor(hazardCount) {
@@ -103,6 +113,7 @@ function getAreaColor(hazardCount) {
                                '#ffffb2';
 }
 
+// Saves data as a file by making a temporary download link and clicking it
 function downloadJson(data, filename) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -132,6 +143,7 @@ function getCookie(name) {
     return cookieValue;
 }
 
+// Loads GeoJSON from the API. Each filter becomes a URL option, e.g. ?hazard_type=pothole
 async function fetchFeatures(path, filters = {}) {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
@@ -150,6 +162,7 @@ async function fetchFeatures(path, filters = {}) {
     return data.features || [];
 }
 
+// Sends a new, edited or deleted hazard to the API (POST, PATCH or DELETE)
 async function sendJson(method, url, body) {
     const response = await fetch(url, {
         method,
@@ -173,6 +186,7 @@ async function sendJson(method, url, body) {
     return response.status === 204 ? null : response.json();
 }
 
+// Each load function asks the API for one layer, keeps the result and draws it on the map
 async function loadStations(filters = {}) {
     current.stations = await fetchFeatures('/api/stations/', filters);
     displayStations(current.stations);
@@ -181,6 +195,7 @@ async function loadStations(filters = {}) {
 async function loadHazards(filters = {}) {
     const { nearLanes, distance, ...params } = filters;
 
+    // No types ticked means no hazards. The near-lanes filter has its own API endpoint.
     if (params.hazard_type && params.hazard_type.length === 0) {
         current.hazards = [];
     } else if (nearLanes) {
@@ -214,6 +229,7 @@ function stationPopup(props) {
     `;
 }
 
+// Stations are dots coloured by how many bikes are available
 function displayStations(stations) {
     layers.stations.clearLayers();
 
@@ -262,6 +278,7 @@ function hazardPopup(hazard) {
     return el;
 }
 
+// A coloured pin with a "!" for each hazard type
 function hazardIcon(hazardType) {
     const color = HAZARD_COLORS[hazardType] || HAZARD_COLORS.other;
     return L.divIcon({
@@ -273,6 +290,7 @@ function hazardIcon(hazardType) {
     });
 }
 
+// Hazards are pins; the title is read out by screen readers
 function displayHazards(hazards) {
     layers.hazards.clearLayers();
 
@@ -285,6 +303,7 @@ function displayHazards(hazards) {
     }).addTo(layers.hazards);
 }
 
+// Lanes are drawn in their own pane so they sit above the areas
 function displayLanes(lanes) {
     layers.lanes.clearLayers();
 
@@ -347,6 +366,7 @@ function resetHighlight() {
     clearHighlight();
 }
 
+// Clicking an area zooms to it, unless a search or report is in progress
 function zoomToFeature(e) {
     if (clickMode) return;
     map.fitBounds(e.target.getBounds());
@@ -369,6 +389,7 @@ function displayAreas(areas) {
     }).addTo(layers.areas);
 }
 
+// Info box (top right) showing the hovered area's hazards and km of cycle lane
 const info = L.control();
 
 info.onAdd = function () {
@@ -386,10 +407,13 @@ info.update = function (props) {
 
 info.addTo(map);
 
+// Clear the outline when the mouse leaves the map, and only show the info box
+// while the areas layer is switched on
 map.on('mouseout', clearHighlight);
 map.on('overlayadd', e => { if (e.layer === layers.areas) info.addTo(map); });
 map.on('overlayremove', e => { if (e.layer === layers.areas) info.remove(); });
 
+// Legend (bottom right) explaining the area, station and lane colours
 const legend = L.control({ position: 'bottomright' });
 
 legend.onAdd = function () {
@@ -420,6 +444,7 @@ legend.onAdd = function () {
 
 legend.addTo(map);
 
+// Updates the counts in the strip above the map
 function updateResultsSummary() {
     const bikes = current.stations.reduce((sum, s) => sum + (s.properties.available_bikes || 0), 0);
     document.getElementById('stations-count').textContent = current.stations.length;
@@ -428,6 +453,7 @@ function updateResultsSummary() {
     document.getElementById('lanes-count').textContent = current.lanes.length;
 }
 
+// Reads the filter options from the side panel
 function getCurrentFilters() {
     const hazardTypes = [...document.querySelectorAll('.hazard-type-filter:checked')].map(el => el.value);
 
@@ -446,6 +472,7 @@ function getCurrentFilters() {
     };
 }
 
+// Reloads every layer with the current filters, all at the same time
 async function applyFilters() {
     showLoading(true);
 
@@ -466,6 +493,7 @@ async function applyFilters() {
     }
 }
 
+// Resets the filters to their defaults and reloads the map
 function clearFilters() {
     document.querySelectorAll('.hazard-type-filter').forEach(el => { el.checked = true; });
     document.getElementById('hazards-near-lanes').checked = false;
@@ -497,10 +525,12 @@ function setClickMode(mode) {
     hint.style.display = mode ? 'block' : 'none';
 }
 
+// Clicking the same button again switches the mode off
 function toggleClickMode(mode) {
     setClickMode(clickMode === mode ? null : mode);
 }
 
+// A map click either opens the report form or runs the selected search
 map.on('click', e => {
     if (!clickMode) return;
     map.closePopup();
@@ -513,6 +543,7 @@ map.on('click', e => {
     }
 });
 
+// Runs "nearest bikes" or "hazards nearby" from a point. The radius is checked first.
 async function runProximitySearch(latlng, mode) {
     const isRadiusSearch = mode === 'radius';
     const radius = Number(document.getElementById('radius-input').value);
@@ -553,6 +584,8 @@ async function runProximitySearch(latlng, mode) {
     }
 }
 
+// Lists the results in the side panel and draws a ring and dashed line to each one.
+// Clicking a result in the list zooms to it.
 function showProximityResults(searchLatLng, features, heading, isRadiusSearch) {
     const results = document.getElementById('proximity-results');
     const title = document.createElement('strong');
@@ -583,6 +616,7 @@ function showProximityResults(searchLatLng, features, heading, isRadiusSearch) {
     });
 }
 
+// Removes the last search from the map and the side panel
 function clearProximityResults() {
     proximityLayer.clearLayers();
     document.getElementById('proximity-results').replaceChildren();
@@ -607,6 +641,7 @@ map.on('locationerror', e => {
 // After saving or deleting, the hazards and area counts are reloaded.
 let hazardModal = null;
 
+// Opens the form, filled in when editing or empty for a new hazard
 function openHazardForm(hazard, latlng) {
     editingHazardId = hazard ? hazard.id : null;
     pendingLocation = latlng || null;
@@ -623,6 +658,7 @@ function openHazardForm(hazard, latlng) {
     hazardModal.show();
 }
 
+// Saves the form: PATCH for an edit, or POST with the clicked location for a new hazard
 async function saveHazard(event) {
     event.preventDefault();
 
@@ -654,6 +690,7 @@ async function saveHazard(event) {
     }
 }
 
+// Asks for confirmation, then deletes the hazard
 async function deleteHazard(id) {
     if (!confirm('Delete this hazard report?')) return;
     try {
@@ -665,11 +702,14 @@ async function deleteHazard(id) {
     }
 }
 
+// Reloads the hazards and the area counts after a change
 async function refreshHazards() {
     await Promise.all([loadHazards(getCurrentFilters().hazards), loadAreas()]);
     updateResultsSummary();
 }
 
+// When the page has loaded: set up the form, colour the filter dots, connect the buttons
+// and load the map data
 document.addEventListener('DOMContentLoaded', function() {
     hazardModal = new bootstrap.Modal(document.getElementById('hazard-modal'));
     document.getElementById('hazard-modal').addEventListener('hidden.bs.modal', () => {
@@ -684,6 +724,7 @@ document.addEventListener('DOMContentLoaded', function() {
         el.style.background = HAZARD_COLORS[el.dataset.hazardSwatch] || HAZARD_COLORS.other;
     });
 
+    // Each button and what clicking it does
     const clickHandlers = {
         'apply-filters': applyFilters,
         'clear-filters': clearFilters,

@@ -29,6 +29,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Cleared {deleted} existing areas")
 
         self.stdout.write(f"Loading areas from {options['path']}...")
+        # LayerMapping copies each shape and its fields from the file into the Area table
         lm = LayerMapping(Area, options["path"], AREA_MAPPING, transform=True)
         lm.save(strict=True, verbose=False)
 

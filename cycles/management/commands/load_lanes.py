@@ -61,6 +61,7 @@ class Command(BaseCommand):
                 outside += 1
                 continue
 
+            # Work out the lane type and a readable name, e.g. "Bike lane (northbound)"
             bike_type = feature.get("BIKE")
             if bike_type not in LANE_TYPES:
                 unknown_types.add(bike_type)
@@ -73,6 +74,7 @@ class Command(BaseCommand):
                 part.srid = 4326
                 lanes.append(CycleLane(name=name, lane_type=lane_type, source=SOURCE, geometry=part))
 
+        # Save all the lanes in batches, which is much faster than one at a time
         CycleLane.objects.bulk_create(lanes, batch_size=1000)
 
         if unknown_types:

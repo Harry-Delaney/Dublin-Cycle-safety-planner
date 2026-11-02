@@ -9,15 +9,18 @@ from django.db.models import (
 from django.db.models.functions import Coalesce
 
 
-# Spatial queries for each model [Week 5, Django docs]
+# Spatial queries for each model
 
 
 class BikeStationQuerySet(models.QuerySet):
+    # Only stations with at least one bike
     def with_bikes(self):
         return self.filter(available_bikes__gt=0)
 
-    # Nearest stations to a point [Django docs, PostGIS docs]
+    # Nearest stations to a point
     def nearest(self, point, limit=5):
+        # Use the spatial index to get a few close candidates quickly, then sort them
+        # by real distance in metres, as the index measures in degrees
         candidates = self.order_by(GeometryDistance("location", point)).values("pk")[: limit * 4]
         return (
             self.model.objects.filter(pk__in=candidates)
@@ -27,7 +30,7 @@ class BikeStationQuerySet(models.QuerySet):
 
 
 class HazardReportQuerySet(models.QuerySet):
-    # Hazards within a distance of a point, closest first [Week 5]
+    # Hazards within a distance of a point, closest first
     def within_distance(self, point, metres):
         return (
             self.filter(location__distance_lte=(point, D(m=metres)))
@@ -35,7 +38,7 @@ class HazardReportQuerySet(models.QuerySet):
             .order_by("distance")
         )
 
-    # Hazards within a distance of any cycle lane [Week 5, Django docs]
+    # Hazards within a distance of any cycle lane
     def near_lanes(self, metres):
         lanes_nearby = CycleLane.objects.filter(
             geometry__distance_lte=(OuterRef("location"), D(m=metres))
@@ -44,7 +47,7 @@ class HazardReportQuerySet(models.QuerySet):
 
 
 class AreaQuerySet(models.QuerySet):
-    # Number of hazards inside each area [Django docs, Week 5]
+    # Number of hazards inside each area
     def with_hazard_counts(self):
         hazards_inside = (
             HazardReport.objects.filter(location__within=OuterRef("geometry"))
@@ -57,6 +60,7 @@ class AreaQuerySet(models.QuerySet):
     # Length of cycle lane inside each area, in metres.
     # Each lane is cut at the area boundary and only the part inside is measured.
     def with_lane_lengths(self):
+        # Tells Django the outer area's geometry is a geometry, so it can be used in Intersection
         area_geometry = ExpressionWrapper(OuterRef("geometry"), output_field=models.GeometryField(srid=4326))
         lanes_inside = (
             CycleLane.objects.filter(geometry__intersects=OuterRef("geometry"))

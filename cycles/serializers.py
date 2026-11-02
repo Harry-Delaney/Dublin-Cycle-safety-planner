@@ -4,6 +4,9 @@ from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from .models import Area, BikeStation, CycleLane, HazardReport
 
 
+# Each serializer turns a model into a GeoJSON feature: the geometry plus the listed fields
+
+# Bike station
 class BikeStationSerializer(GeoFeatureModelSerializer):
     class Meta:
         model = BikeStation
@@ -26,6 +29,7 @@ class BikeStationDistanceSerializer(BikeStationSerializer):
         return round(obj.distance.m, 1)
 
 
+# Hazard report
 class HazardReportSerializer(GeoFeatureModelSerializer):
     # Show the reporter's username, set automatically rather than sent by the user
     reported_by = serializers.StringRelatedField(read_only=True)
@@ -56,6 +60,7 @@ class HazardReportDistanceSerializer(HazardReportSerializer):
         return round(obj.distance.m, 1)
 
 
+# Cycle lane
 class CycleLaneSerializer(GeoFeatureModelSerializer):
     # Readable lane type, e.g. "Segregated"
     lane_type_display = serializers.CharField(
@@ -68,6 +73,7 @@ class CycleLaneSerializer(GeoFeatureModelSerializer):
         fields = ["id", "name", "lane_type", "lane_type_display", "source"]
 
 
+# Area (electoral division)
 class AreaSerializer(GeoFeatureModelSerializer):
     class Meta:
         model = Area
