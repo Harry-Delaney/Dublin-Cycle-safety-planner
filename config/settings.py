@@ -78,6 +78,12 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Static file names include a hash of their contents, so browsers fetch the new CSS and JS after an update
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"},
+}
+
 # Go back to the map after logging in or out
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
