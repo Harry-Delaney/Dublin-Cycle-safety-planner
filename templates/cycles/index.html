@@ -3,6 +3,9 @@
 
 {% block title %}Map - Cycle Safe{% endblock %}
 
+{# The map page fills the screen on laptops, so the footer only shows on phones and tablets #}
+{% block footer_class %}d-lg-none{% endblock %}
+
 {% block content %}
 <div class="container-fluid mt-3">
     <h1 class="visually-hidden">Dublin cycle safety map</h1>
@@ -11,26 +14,18 @@
         <!-- Control Panel -->
         <div class="col-lg-3 order-2 order-lg-1">
             <div class="control-panel">
-                <h5>📊 Data Overview</h5>
-                <div class="stats-card">
-                    <p class="h6">Bike Stations: <span id="total-stations">{{ total_stations }}</span></p>
-                    <p class="h6">Hazard Reports: <span id="total-hazards">{{ total_hazards }}</span></p>
-                    <p class="h6">Cycle Lanes: <span id="total-lanes">{{ total_lanes }}</span></p>
-                    <p class="h6 mb-0">Areas: <span id="total-areas">{{ total_areas }}</span></p>
-                </div>
-
                 <div class="filter-section">
                     <h6>📍 Proximity Search</h6>
                     <div class="btn-group w-100 mb-2" role="group" aria-label="Proximity search type">
-                        <button type="button" id="nearest-search-btn" class="btn btn-outline-success btn-sm" aria-pressed="false">Nearest bikes</button>
-                        <button type="button" id="radius-search-btn" class="btn btn-outline-success btn-sm" aria-pressed="false">Hazards nearby</button>
+                        <button type="button" id="nearest-search-btn" class="btn btn-outline-primary btn-sm" aria-pressed="false">Nearest bikes</button>
+                        <button type="button" id="radius-search-btn" class="btn btn-outline-primary btn-sm" aria-pressed="false">Hazards nearby</button>
                     </div>
                     <div id="radius-control" class="input-group input-group-sm mb-2 d-none">
                         <label class="input-group-text" for="radius-input">Radius</label>
                         <input type="number" id="radius-input" class="form-control" value="500" min="50" max="5000" step="50">
                         <span class="input-group-text">m</span>
                     </div>
-                    <button type="button" id="locate-btn" class="btn btn-success btn-sm w-100">Use my location</button>
+                    <button type="button" id="locate-btn" class="btn btn-primary btn-sm w-100">Use my location</button>
                     <p id="proximity-status" class="small text-muted mt-2 mb-1" role="status" aria-live="polite">Choose a search, then click the map, or use your location.</p>
                     <div id="proximity-results" class="list-group" aria-live="polite"></div>
                 </div>
@@ -97,62 +92,42 @@
                     </div>
                 </div>
 
+                <!-- Reference info and downloads go last, below the actions -->
+                <div class="filter-section">
+                    <h6>📊 Data Overview</h6>
+                    <div class="stats-card">
+                        <p class="h6">Bike Stations: <span id="total-stations">{{ total_stations }}</span></p>
+                        <p class="h6">Hazard Reports: <span id="total-hazards">{{ total_hazards }}</span></p>
+                        <p class="h6">Cycle Lanes: <span id="total-lanes">{{ total_lanes }}</span></p>
+                        <p class="h6 mb-0">Areas: <span id="total-areas">{{ total_areas }}</span></p>
+                    </div>
+                </div>
+
                 <div class="filter-section mb-0">
                     <h6>📥 Export Data</h6>
-                    <button type="button" id="export-hazards" class="btn btn-outline-success btn-sm export-btn">Hazards GeoJSON</button>
-                    <button type="button" id="export-stations" class="btn btn-outline-success btn-sm export-btn">Stations GeoJSON</button>
+                    <button type="button" id="export-hazards" class="btn btn-outline-secondary btn-sm export-btn">Hazards GeoJSON</button>
+                    <button type="button" id="export-stations" class="btn btn-outline-secondary btn-sm export-btn">Stations GeoJSON</button>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-9 order-1 order-lg-2 mb-3 mb-lg-0">
+        <div class="col-lg-9 order-1 order-lg-2 mb-3">
+            <!-- Counts for what the map is showing, in a slim strip above it -->
+            <div class="map-stats row g-2 mb-2">
+                <div class="col-6 col-md-3"><div class="map-stat"><span class="text-success" id="stations-count">0</span> stations shown</div></div>
+                <div class="col-6 col-md-3"><div class="map-stat"><span class="text-primary" id="bikes-count">0</span> bikes available</div></div>
+                <div class="col-6 col-md-3"><div class="map-stat"><span class="text-danger" id="hazards-count">0</span> hazards shown</div></div>
+                <div class="col-6 col-md-3"><div class="map-stat"><span class="text-info-emphasis" id="lanes-count">0</span> lanes shown</div></div>
+            </div>
             <div class="position-relative">
                 <div id="map" role="region" aria-label="Map of Dublin cycle lanes, bike stations and hazard reports"></div>
                 <!-- Hint banner shown while picking a spot on the map -->
                 <div class="map-hint" id="map-hint" aria-live="polite"></div>
                 <div class="loading" id="loading">
-                    <div class="spinner-border text-success" role="status">
+                    <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
                     <p class="mb-0">Loading data...</p>
-                </div>
-            </div>
-
-            <!-- Results Summary -->
-            <div class="mt-3">
-                <div class="row g-3">
-                    <div class="col-6 col-md-3">
-                        <div class="card h-100">
-                            <div class="card-body text-center">
-                                <h6 class="card-title">Stations Displayed</h6>
-                                <p class="h3 text-success mb-0" id="stations-count">0</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card h-100">
-                            <div class="card-body text-center">
-                                <h6 class="card-title">Bikes Available</h6>
-                                <p class="h3 text-primary mb-0" id="bikes-count">0</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card h-100">
-                            <div class="card-body text-center">
-                                <h6 class="card-title">Hazards Displayed</h6>
-                                <p class="h3 text-danger mb-0" id="hazards-count">0</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card h-100">
-                            <div class="card-body text-center">
-                                <h6 class="card-title">Lanes Displayed</h6>
-                                <p class="h3 text-info-emphasis mb-0" id="lanes-count">0</p>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

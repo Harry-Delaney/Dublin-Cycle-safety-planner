@@ -1,6 +1,10 @@
 body {
     background-color: #f8f9fa;
 }
+/* Dark navy navbar, so the bright blue is kept for buttons */
+.navbar-cycle {
+    background-color: #0b2545;
+}
 .navbar-brand {
     font-weight: bold;
 }
@@ -9,7 +13,7 @@ body {
 }
 
 #map {
-    height: 70vh;
+    height: calc(100vh - 160px);
     min-height: 450px;
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -33,11 +37,25 @@ body {
     margin-bottom: 15px;
 }
 .stats-card {
-    background: linear-gradient(135deg, #1e8449 0%, #117a65 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 10px;
-    margin-bottom: 15px;
+    background: #e7f0fe;
+    color: #052c65;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+/* Slim strip of map counts above the map */
+.map-stat {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.875rem;
+    color: #495057;
+}
+.map-stat span {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-right: 4px;
 }
 .export-btn {
     margin: 5px 5px 0 0;
@@ -62,7 +80,7 @@ body {
     left: 50%;
     transform: translateX(-50%);
     z-index: 1000;
-    background: #212529;
+    background: #0b2545;
     color: white;
     padding: 6px 14px;
     border-radius: 20px;
@@ -144,7 +162,7 @@ body {
     left: 8px;
     z-index: 2000;
     background: white;
-    color: #146c43;
+    color: #0a58ca;
     padding: 8px 14px;
     border-radius: 5px;
     font-weight: 600;
@@ -157,11 +175,12 @@ body {
     outline-offset: 2px;
 }
 
-/* Keep the panel beside the map scrollable on large screens */
+/* On large screens the panel matches the map's height and scrolls on its own */
 @media (min-width: 992px) {
     .control-panel {
-        max-height: calc(70vh + 130px);
+        max-height: calc(100vh - 112px);
         overflow-y: auto;
+        margin-bottom: 0;
     }
 }
 
